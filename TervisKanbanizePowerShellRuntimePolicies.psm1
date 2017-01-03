@@ -16,14 +16,27 @@
     Install-TervisKanbanize -Email
 }
 
-function Move-CompletedCardsThatHaveAllInformationToArchive {
+Function Invoke-TervisKanbanizePowerShellRuntimePolicies {
+    $Cards = Get-KanbanizeTervisHelpDeskCards -HelpDeskProcess -HelpDeskTechnicianProcess -HelpDeskTriageProcess
     $OpenTrackITWorkOrders = Get-TervisTrackITUnOfficialWorkOrders
+
+    Move-CompletedCardsThatHaveAllInformationToArchive -Cards $Cards -WorkOrders $OpenTrackITWorkOrders
+    Import-UnassignedTrackItsToKanbanize -Cards $Cards
+    Move-CardsInWaitingForScheduledDateThatDontHaveScheduledDateSet -Cards $Cards
+    Move-CardsInWaitingForScheduledDateThatHaveReachedTheirDate -Cards $Cards
+    Move-CardsInWaitingForScheduledDateThatHaveCommentAfterMovement -Cards $Cards
+}
+
+function Move-CompletedCardsThatHaveAllInformationToArchive {
+    param (
+        $Cards,
+        $WorkOrders
+    )
     
-    $CardsThatCanBeArchived = Get-KanbanizeTervisHelpDeskCards -HelpDeskProcess -HelpDeskTechnicianProcess | 
+    $CardsThatCanBeArchived = $Cards | 
     where columnpath -In "Done","Archive" |
     where type -ne "None" |
     where assignee -NE "None" |
-    where color -in ("#cc1a33","#f37325","#77569b","#067db7") |
     where TrackITID -NotIn $($OpenTrackITWorkOrders.woid)
 
     foreach ($Card in $CardsThatCanBeArchived) {
@@ -31,8 +44,11 @@ function Move-CompletedCardsThatHaveAllInformationToArchive {
     }
 }
 
-function Move-CardsInScheduledDateThatDontHaveScheduledDateSet {
-    $CardsInScheduledDateThatDontHaveScheduledDateSet = Get-KanbanizeTervisHelpDeskCards -HelpDeskProcess -HelpDeskTechnicianProcess -HelpDeskTriageProcess | 
+function Move-CardsInWaitingForScheduledDateThatDontHaveScheduledDateSet {
+    param (
+        $Cards
+    )
+    $CardsInScheduledDateThatDontHaveScheduledDateSet = $Cards | 
     where columnpath -Match "Waiting for Scheduled date" | 
     where {$_.scheduleddate -eq $null -or $_.scheduleddate -eq "" }
     
@@ -41,31 +57,60 @@ function Move-CardsInScheduledDateThatDontHaveScheduledDateSet {
     }
 }
 
-#Unfinished
-function Move-CardsInDoneListThatHaveStillHaveSomethingIncomplete {
-    $Cards = Get-KanbanizeTervisHelpDeskCards -HelpDeskProcess -HelpDeskTechnicianProcess
+function Move-CardsInWaitingForScheduledDateThatHaveReachedTheirDate {
+    param (
+        $Cards
+    )
+    $CardsInScheduledDateThatHaveReachedTheirDate = $Cards | 
+    where columnpath -Match "Waiting for Scheduled date" | 
+    where {(Get-Date $_.scheduleddate) -le (Get-Date) }
     
-    $CardsInDoneList = $Cards |
-    where columnpath -Match "Done"
+    foreach ($Card in $CardsInScheduledDateThatHaveReachedTheirDate) {
+        Move-KanbanizeTask -BoardID $Card.BoardID -TaskID $Card.TaskID -Column "In Progress.Waiting to be worked on"
+    }
+}
+
+Function Move-CardsInWaitingForScheduledDateThatHaveCommentAfterMovement {
+    param (
+        $Cards
+    )
+    $CardsInWaitingForScheduledDate = $Cards | 
+    where columnpath -Match "Waiting for Scheduled date"
+
+    foreach ($Card in $CardsInWaitingForScheduledDate) {
+        $CardDetails = Get-KanbanizeTaskDetails -BoardID $Card.boardid -TaskID $Card.taskid -History yes | 
+        Add-TervisKanbanizeCardDetailsProperties -PassThru
     
-    $OpenTrackITWorkOrders = get-TervisTrackITWorkOrders
+        $LastCommentDate = $CardDetails.HistoryDetails |
+        Where-Object historyevent -eq "Comment added" |
+        Sort-Object EntryDateTime -Descending | 
+        Select-Object -First 1 |
+        Select-Object -ExpandProperty EntryDateTime
+    
+        $DateMovedToScheduledDateColumn = $CardDetails.HistoryDetails |
+        Where-Object historyevent -eq "Task moved" |
+        Where-Object TransitionToColumn -EQ "In Progress.Waiting for scheduled date" |
+        Sort-Object EntryDateTime -Descending | 
+        Select-Object -First 1 |
+        Select-Object -ExpandProperty EntryDateTime
 
-    $CardsThatAreOpenInTrackITButDoneInKanbanize = Compare-Object -ReferenceObject $OpenTrackITWorkOrders.woid -DifferenceObject $Cardsindonelist.trackitid -PassThru -IncludeEqual |
-    where sideindicator -EQ "=="
-
-    foreach ($Card in $CardsThatCanBeArchived){
-        Move-KanbanizeTask -BoardID $Card.BoardID -TaskID $Card.TaskID -Column "Archive"
+        if ($LastCommentDate -gt $DateMovedToScheduledDateColumn) {
+            Move-KanbanizeTask -BoardID $CardDetails.boardid -TaskID $CardDetails.taskid -Column "In Progress.Waiting to be worked on"
+        }
     }
 }
 
 function Import-UnassignedTrackItsToKanbanize {
+    param (
+        $Cards
+    )
 
     $Cards = Get-KanbanizeTervisHelpDeskCards -HelpDeskProcess -HelpDeskTechnicianProcess -HelpDeskTriageProcess
 
     $TriageProcessBoardID = 29
     $TriageProcessStartingColumn = "Requested"
 
-    $UnassignedWorkOrders = Get-UnassignedTrackITs
+    $WorkOrdersWithoutKanbanizeID = Get-TervisTrackITUnOfficialWorkOrder | where { -not $_.KanbanizeID }
 
     foreach ($UnassignedWorkOrder in $UnassignedWorkOrders ) {
         try {
@@ -79,6 +124,51 @@ function Import-UnassignedTrackItsToKanbanize {
         }
     }
 }
+
+Function Get-BusinesssServicesCardAnalysis {
+    $WorkOrdersWithoutKanbanizeID = Get-TervisTrackITUnOfficialWorkOrder | where { -not $_.KanbanizeID }
+    $WorkOrdersWithoutKanbanizeID| group type
+    Groups = $WorkOrdersWithoutKanbanizeID| group type -AsHashTable -AsString
+    $Groups.'Business Services'|group respons | sort count -Descending
+}
+
+function Import-TrackItsToKanbanize {
+    param (
+        $Cards
+    )
+
+    $TriageProcessStartingColumn = "Requested"
+    
+    $TypeToTriageBoardIDMapping = [PSCustomObject][Ordered]@{
+        WorkOrderType = "Technical Services" 
+        TriageBoardID = 29
+    }
+    #,
+    #[PSCustomObject][Ordered]@{
+    #    WorkOrderType = "Business Services"
+    #    TriageBoardID = 71
+    #}
+
+    $WorkOrdersToImport = Get-TervisTrackITUnOfficialWorkOrder | 
+    where Type -In $TypeToTriageBoardIDMapping.WorkOrderType | 
+    where { -not $_.KanbanizeID }
+
+    foreach ($WorkOrderToImport in $WorkOrdersToImport ) {
+        try {
+            if($WorkOrderToImport.Wo_Num -in $($Cards.TrackITID)) {throw "There is already a card for this Track IT"}
+
+            $DestinationBoardID = $TypeToTriageBoardIDMapping | 
+            where WorkOrderType -EQ $WorkOrderToImport.Type |
+            select -ExpandProperty TriageBoardID
+
+            New-KanbanizeCardFromTrackITWorkOrder -WorkOrder $WorkOrderToImport -DestinationBoardID $DestinationBoardID -DestinationColumn $TriageProcessStartingColumn
+        } catch {            
+            $ErrorMessage = "Error running Import-UnassignedTrackItsToKanbanize: " + $UnassignedWorkOrder.Wo_Num + " -  " + $UnassignedWorkOrder.Task
+            Send-MailMessage -From HelpDeskBot@tervis.com -to HelpDeskDispatch@tervis.com -subject $ErrorMessage -SmtpServer cudaspam.tervis.com -Body $_.Exception|format-list -force
+        }
+    }
+}
+
 
 Function Close-WorkOrdersForEmployeesWhoDontWorkAtTervis {
     $WorkOrders = Get-TervisTrackITUnOfficialWorkOrder
