@@ -25,10 +25,10 @@ function Uninstall-TervisKanbnaizePowerShellRuntimePolicies {
 
 Function Invoke-TervisKanbanizePowerShellRuntimePolicies {
     $Cards = Get-TervisKanbnaizeAllTasksFromAllBoards
-    $OpenTrackITWorkOrders = Get-TervisTrackITUnOfficialWorkOrder
+    $WorkOrders = Get-TervisTrackITUnOfficialWorkOrder
 
-    Move-CompletedCardsThatHaveAllInformationToArchive -Cards $Cards -WorkOrders $OpenTrackITWorkOrders
-    Import-UnassignedTrackItsToKanbanize -Cards $Cards
+    Move-CompletedCardsThatHaveAllInformationToArchive -Cards $Cards -WorkOrders $WorkOrders
+    Import-TrackItsToKanbanize -Cards $Cards -WorkOrders $WorkOrders
     Move-CardsInWaitingForScheduledDateThatDontHaveScheduledDateSet -Cards $Cards
     Move-CardsInWaitingForScheduledDateThatHaveReachedTheirDate -Cards $Cards
     Move-CardsInWaitingForScheduledDateThatHaveCommentAfterMovement -Cards $Cards
@@ -141,7 +141,8 @@ Function Get-BusinesssServicesCardAnalysis {
 
 function Import-TrackItsToKanbanize {
     param (
-        $Cards
+        $Cards,
+        $WorkOrders
     )
 
     $TriageProcessStartingColumn = "Requested"
@@ -156,7 +157,7 @@ function Import-TrackItsToKanbanize {
     #    TriageBoardID = 71
     #}
 
-    $WorkOrdersToImport = Get-TervisTrackITUnOfficialWorkOrder | 
+    $WorkOrdersToImport = $WorkOrders | 
     where Type -In $TypeToTriageBoardIDMapping.WorkOrderType | 
     where { -not $_.KanbanizeID }
 
