@@ -25,7 +25,7 @@ function Uninstall-TervisKanbnaizePowerShellRuntimePolicies {
 
 Function Invoke-TervisKanbanizePowerShellRuntimePolicies {
     $Cards = Get-TervisKanbnaizeAllTasksFromAllBoards
-    $OpenTrackITWorkOrders = Get-TervisTrackITUnOfficialWorkOrders
+    $OpenTrackITWorkOrders = Get-TervisTrackITUnOfficialWorkOrder
 
     Move-CompletedCardsThatHaveAllInformationToArchive -Cards $Cards -WorkOrders $OpenTrackITWorkOrders
     Import-UnassignedTrackItsToKanbanize -Cards $Cards
