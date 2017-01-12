@@ -1,7 +1,6 @@
-﻿function Install-TervisKanbnaizePowerShellRuntimePolicies {
+﻿function Install-TervisKanbanizePowerShellRuntimePolicies {
     param (
-        $PathToScriptForScheduledTask = $PSScriptRoot,
-        [Parameter(Mandatory)]$ScheduledTaskUserPassword
+        $PathToScriptForScheduledTask = $PSScriptRoot
     )
     Install-PasswordStatePowerShell
 
