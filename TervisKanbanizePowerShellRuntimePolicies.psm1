@@ -27,8 +27,8 @@ Function Invoke-TervisKanbanizePowerShellRuntimePolicies {
     $Cards = Get-TervisKanbnaizeAllTasksFromAllBoards
     $WorkOrders = Get-TervisTrackITUnOfficialWorkOrder
 
-    Move-CompletedCardsThatHaveAllInformationToArchive -Cards $Cards -WorkOrders $WorkOrders
     Import-TrackItsToKanbanize -Cards $Cards -WorkOrders $WorkOrders
+    Move-CompletedCardsThatHaveAllInformationToArchive -Cards $Cards -WorkOrders $WorkOrders
     Move-CardsInWaitingForScheduledDateThatDontHaveScheduledDateSet -Cards $Cards
     Move-CardsInWaitingForScheduledDateThatHaveReachedTheirDate -Cards $Cards
     Move-CardsInWaitingForScheduledDateThatHaveCommentAfterMovement -Cards $Cards
@@ -150,17 +150,15 @@ function Import-TrackItsToKanbanize {
     $TypeToTriageBoardIDMapping = [PSCustomObject][Ordered]@{
         WorkOrderType = "Technical Services" 
         TriageBoardID = 29
-    }
-    ,
+    },
     [PSCustomObject][Ordered]@{
         WorkOrderType = "Business Services"
-        WorkOrderSubTypeToExclude = "EBS"
         TriageBoardID = 71
     }
 
     $WorkOrdersToImport = $WorkOrders | 
     where Type -In $TypeToTriageBoardIDMapping.WorkOrderType | 
-    Where WOTYPE2 -NotIn $TypeToTriageBoardIDMapping.WorkOrderSubTypeToExclude
+    where WOTYPE2 -NE "EBS" |
     where { -not $_.KanbanizeID }
 
     foreach ($WorkOrderToImport in $WorkOrdersToImport ) {
