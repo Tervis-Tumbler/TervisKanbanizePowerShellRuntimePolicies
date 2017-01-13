@@ -171,7 +171,7 @@ function Import-TrackItsToKanbanize {
 
             New-KanbanizeCardFromTrackITWorkOrder -WorkOrder $WorkOrderToImport -DestinationBoardID $DestinationBoardID -DestinationColumn $TriageProcessStartingColumn
         } catch {            
-            $ErrorMessage = "Error running Import-UnassignedTrackItsToKanbanize: " + $UnassignedWorkOrder.Wo_Num + " -  " + $UnassignedWorkOrder.Task
+            $ErrorMessage = "Error running Import-UnassignedTrackItsToKanbanize: " + $WorkOrderToImport.Wo_Num + " -  " + $WorkOrderToImport.Task
             Send-MailMessage -From HelpDeskBot@tervis.com -to HelpDeskDispatch@tervis.com -subject $ErrorMessage -SmtpServer cudaspam.tervis.com -Body $_.Exception|format-list -force
         }
     }
