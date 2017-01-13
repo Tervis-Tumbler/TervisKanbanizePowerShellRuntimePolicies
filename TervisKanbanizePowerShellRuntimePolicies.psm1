@@ -9,6 +9,7 @@
     Install-PowerShellApplicationScheduledTask -PathToScriptForScheduledTask $PathToScriptForScheduledTask `
         -Credential $ScheduledTasksCredential `
         -ScheduledTaskFunctionName "Invoke-TervisKanbanizePowerShellRuntimePolicies" `
+        -RepetitionInterval EverWorkdayDuringTheDayEvery15Minutes
 
     $KanbanizeCredential = Get-PasswordstateCredential -PasswordID 2998
 
