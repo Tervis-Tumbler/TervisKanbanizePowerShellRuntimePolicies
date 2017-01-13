@@ -151,14 +151,16 @@ function Import-TrackItsToKanbanize {
         WorkOrderType = "Technical Services" 
         TriageBoardID = 29
     }
-    #,
-    #[PSCustomObject][Ordered]@{
-    #    WorkOrderType = "Business Services"
-    #    TriageBoardID = 71
-    #}
+    ,
+    [PSCustomObject][Ordered]@{
+        WorkOrderType = "Business Services"
+        WorkOrderSubTypeToExclude = "EBS"
+        TriageBoardID = 71
+    }
 
     $WorkOrdersToImport = $WorkOrders | 
     where Type -In $TypeToTriageBoardIDMapping.WorkOrderType | 
+    Where WOTYPE2 -NotIn $TypeToTriageBoardIDMapping.WorkOrderSubTypeToExclude
     where { -not $_.KanbanizeID }
 
     foreach ($WorkOrderToImport in $WorkOrdersToImport ) {
