@@ -32,6 +32,44 @@ Function Invoke-TervisKanbanizePowerShellRuntimePolicies {
     Move-CardsInWaitingForScheduledDateThatDontHaveScheduledDateSet -Cards $Cards
     Move-CardsInWaitingForScheduledDateThatHaveReachedTheirDate -Cards $Cards
     Move-CardsInWaitingForScheduledDateThatHaveCommentAfterMovement -Cards $Cards
+    Add-WorkInstructionLinkToCards -Cards $Cards
+}
+
+function Add-WorkInstructionLinkToCards {
+    param(
+        $Cards
+    )
+    
+    $TervisKanbanizePowerShellTypeMetaData = Get-TervisKanbanizePowerShellTypeMetaData -Cards $Cards
+
+    $TypesWithWorkInsructions = $TervisKanbanizePowerShellTypeMetaData | 
+    where WorkInstruction |
+    Select -ExpandProperty Type
+
+    $CardsThatNeedWorkInstructionAdded = $Cards |
+    where Type -ne "None" |
+    where Type -In $TypesWithWorkInsructions |
+    where {-Not $_.WorkInstruction}
+    
+    foreach ($Card in $CardsThatNeedWorkInstructionAdded) {
+        $WorkInstructionURI = Get-WorkInstructionURI -Type $Card.Type -Cards $Cards
+        if ($WorkInstructionURI) {
+            Edit-KanbanizeTask -TaskID $Card.taskid -BoardID $Card.BoardID -CustomFields @{"Work Instruction"="$WorkInstructionURI"}
+        }
+    }
+}
+
+function Invoke-FixBrokenTypesOnCardsWithWorkInstructions {
+    param (
+        $Cards
+    )
+    $CardsThatNeedFixing = $Cards | where boardid -NE 32 | where boardid -ne 33 | where WorkInstruction
+    $TervisKanbanizePowerShellTypeMetaData = Get-TervisKanbanizePowerShellTypeMetaData -Cards $Cards
+    
+    foreach ($Card in $CardsThatNeedFixing) {
+        $Type = $TervisKanbanizePowerShellTypeMetaData | where WorkInstruction -EQ $Card.WorkInstruction | select -ExpandProperty Type
+        Edit-KanbanizeTask -TaskID $Card.taskid -BoardID $Card.BoardID -Type $Type
+    }
 }
 
 function Move-CompletedCardsThatHaveAllInformationToArchive {
