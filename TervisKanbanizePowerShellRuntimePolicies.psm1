@@ -11,9 +11,28 @@
         -ScheduledTaskFunctionName "Invoke-TervisKanbanizePowerShellRuntimePolicies" `
         -RepetitionInterval EverWorkdayDuringTheDayEvery15Minutes
 
+    Install-PowerShellApplicationScheduledTask -PathToScriptForScheduledTask $PathToScriptForScheduledTask `
+        -Credential $ScheduledTasksCredential `
+        -ScheduledTaskFunctionName "New-EachMondayRecurringCards" `
+        -RepetitionInterval OnceAWeekMondayMorning
+
+    Install-PowerShellApplicationScheduledTask -PathToScriptForScheduledTask $PathToScriptForScheduledTask `
+        -Credential $ScheduledTasksCredential `
+        -ScheduledTaskFunctionName "New-EachWorkDayRecurringCards" `
+        -RepetitionInterval EverWorkdayOnceAtTheStartOfTheDay
+
     $KanbanizeCredential = Get-PasswordstateCredential -PasswordID 2998
 
     Install-TervisKanbanize -Email $KanbanizeCredential.UserName -Pass $KanbanizeCredential.GetNetworkCredential().password
+}
+
+Function New-EachWorkDayRecurringCards {
+    New-KanbanizeTask -BoardID 29 -Title "Gather Kanban cards" -Type "Kanban cards gather"
+    New-KanbanizeTask -BoardID 29 -Title "Review requested kanban cards" -Type "Kanban cards requested review"
+}
+
+Function New-EachMondayRecurringCards {
+    New-KanbanizeTask -BoardID 29 -Title "Review ordered kanban cards" -Type "Kanban cards ordered review"    
 }
 
 function Uninstall-TervisKanbnaizePowerShellRuntimePolicies {
