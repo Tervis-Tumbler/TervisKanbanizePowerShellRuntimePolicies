@@ -27,12 +27,12 @@
 }
 
 Function New-EachWorkDayRecurringCards {
-    New-KanbanizeTask -BoardID 29 -Title "Gather Kanban cards" -Type "Kanban cards gather"
-    New-KanbanizeTask -BoardID 29 -Title "Review requested kanban cards" -Type "Kanban cards requested review"
+    New-KanbanizeTask -BoardID 29 -Title "Gather Kanban cards" -Type "Kanban cards gather" -Column Requested
+    New-KanbanizeTask -BoardID 29 -Title "Review requested kanban cards" -Type "Kanban cards requested review" -Column Requested
 }
 
 Function New-EachMondayRecurringCards {
-    New-KanbanizeTask -BoardID 29 -Title "Review ordered kanban cards" -Type "Kanban cards ordered review"    
+    New-KanbanizeTask -BoardID 29 -Title "Review ordered kanban cards" -Type "Kanban cards ordered review" -Column Requested
 }
 
 function Uninstall-TervisKanbnaizePowerShellRuntimePolicies {
@@ -40,6 +40,8 @@ function Uninstall-TervisKanbnaizePowerShellRuntimePolicies {
         $PathToScriptForScheduledTask = $PSScriptRoot
     )
     Uninstall-PowerShellApplicationScheduledTask -PathToScriptForScheduledTask $PathToScriptForScheduledTask -ScheduledTaskFunctionName "Invoke-TervisKanbanizePowerShellRuntimePolicies"
+    Uninstall-PowerShellApplicationScheduledTask -PathToScriptForScheduledTask $PathToScriptForScheduledTask -ScheduledTaskFunctionName "New-EachMondayRecurringCards"
+    Uninstall-PowerShellApplicationScheduledTask -PathToScriptForScheduledTask $PathToScriptForScheduledTask -ScheduledTaskFunctionName "New-EachWorkDayRecurringCards"
 }
 
 Function Invoke-TervisKanbanizePowerShellRuntimePolicies {
