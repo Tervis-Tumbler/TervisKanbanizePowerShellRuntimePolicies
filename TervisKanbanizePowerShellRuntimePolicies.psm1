@@ -26,12 +26,12 @@
     Install-TervisKanbanize -Email $KanbanizeCredential.UserName -Pass $KanbanizeCredential.GetNetworkCredential().password
 }
 
-Function New-EachWorkDayRecurringCards {
+function New-EachWorkDayRecurringCards {
     New-KanbanizeTask -BoardID 29 -Title "Gather Kanban cards" -Type "Kanban cards gather" -Column Requested
     New-KanbanizeTask -BoardID 29 -Title "Review requested kanban cards" -Type "Kanban cards requested review" -Column Requested
 }
 
-Function New-EachMondayRecurringCards {
+function New-EachMondayRecurringCards {
     New-KanbanizeTask -BoardID 29 -Title "Review ordered kanban cards" -Type "Kanban cards ordered review" -Column Requested
 }
 
@@ -44,7 +44,7 @@ function Uninstall-TervisKanbnaizePowerShellRuntimePolicies {
     Uninstall-PowerShellApplicationScheduledTask -PathToScriptForScheduledTask $PathToScriptForScheduledTask -ScheduledTaskFunctionName "New-EachWorkDayRecurringCards"
 }
 
-Function Invoke-TervisKanbanizePowerShellRuntimePolicies {
+function Invoke-TervisKanbanizePowerShellRuntimePolicies {
     $Cards = Get-TervisKanbnaizeAllTasksFromAllBoards
     $WorkOrders = Get-TervisTrackITUnOfficialWorkOrder
 
@@ -54,6 +54,43 @@ Function Invoke-TervisKanbanizePowerShellRuntimePolicies {
     Move-CardsInWaitingForScheduledDateThatHaveReachedTheirDate -Cards $Cards
     Move-CardsInWaitingForScheduledDateThatHaveCommentAfterMovement -Cards $Cards
     Add-WorkInstructionLinkToCards -Cards $Cards
+    Remove-HelpDeskCardsOlderThan30Days -Cards $Cards
+}
+
+function Remove-HelpDeskCardsOlderThan30Days {
+    param(
+        $Cards
+    )
+    
+    $CardsToBeDeleted = $Cards | 
+    where boardid -eq 32 |
+    where lanename -NE "Unplanned Work" |
+    where columnpath -Match requested |
+    where CreatedAtDateTime -LT (Get-Date).AddDays(-30) 
+
+    foreach($Card in $CardsToBeDeleted) {
+        if ($Card.TrackITID) {
+            try {
+                Invoke-TrackITLogin -Username helpdeskbot -Pwd helpdeskbot
+                $Result = $null
+                $Result = Close-TrackITWorkOrder -WorkOrderNumber $Card.TrackITID -Resolution @"
+The Tervis Help Desk team always strives to resolve all requests in a timely, professional manner.  
+
+However, as is the case at most companies, the volume of requests has always outweighed the resources available to resolve issues. 
+
+Therefore, in the spirit of managing this backlog, effective immediately, all requests that have remained unresolved for 30 days will be closed.  If the original requestor feels the issue still requires attention from the Help Desk, they will need to resubmit a request.
+
+A process exists to ‘expedite’ resolution, but this will require manager approval and the expectation of management is that the request is truly urgent and essential.
+
+Thank you in advance for your cooperation and understanding.
+"@
+                $Result
+            } catch { continue }            
+        }
+        if (-not $Result -or $Result.Success -eq "true" -or $Result.data.Code -eq "Business.HelpDesk.046" ) {
+            Remove-KanbanizeTask -BoardID 32 -TaskID $Card.taskid
+        }
+    }
 }
 
 function Add-WorkInstructionLinkToCards {
@@ -166,32 +203,7 @@ Function Move-CardsInWaitingForScheduledDateThatHaveCommentAfterMovement {
     }
 }
 
-#function Import-UnassignedTrackItsToKanbanize {
-#    param (
-#        $Cards
-#    )
-#
-#    $Cards = Get-KanbanizeTervisHelpDeskCards -HelpDeskProcess -HelpDeskTechnicianProcess -HelpDeskTriageProcess
-#
-#    $TriageProcessBoardID = 29
-#    $TriageProcessStartingColumn = "Requested"
-#
-#    $WorkOrdersWithoutKanbanizeID = Get-TervisTrackITUnOfficialWorkOrder | where { -not $_.KanbanizeID }
-#
-#    foreach ($UnassignedWorkOrder in $UnassignedWorkOrders ) {
-#        try {
-#            if($UnassignedWorkOrder.Wo_Num -in $($Cards.TrackITID)) {throw "There is already a card for this Track IT"}
-#
-#            New-KanbanizeCardFromTrackITWorkOrder -WorkOrder $UnassignedWorkOrder -DestinationBoardID $TriageProcessBoardID -DestinationColumn $TriageProcessStartingColumn
-#            Edit-TrackITWorkOrder -WorkOrderNumber $WorkOrder.Wo_Num -AssignedTechnician "Backlog" | Out-Null
-#        } catch {            
-#            $ErrorMessage = "Error running Import-UnassignedTrackItsToKanbanize: " + $UnassignedWorkOrder.Wo_Num + " -  " + $UnassignedWorkOrder.Task
-#            Send-MailMessage -From HelpDeskBot@tervis.com -to HelpDeskDispatch@tervis.com -subject $ErrorMessage -SmtpServer cudaspam.tervis.com -Body $_.Exception|format-list -force
-#        }
-#    }
-#}
-
-Function Get-BusinesssServicesCardAnalysis {
+function Get-BusinesssServicesCardAnalysis {
     $WorkOrdersWithoutKanbanizeID = Get-TervisTrackITUnOfficialWorkOrder | where { -not $_.KanbanizeID }
     $WorkOrdersWithoutKanbanizeID| group type
     Groups = $WorkOrdersWithoutKanbanizeID| group type -AsHashTable -AsString
@@ -222,13 +234,23 @@ function Import-TrackItsToKanbanize {
 
     foreach ($WorkOrderToImport in $WorkOrdersToImport ) {
         try {
-            if($WorkOrderToImport.Wo_Num -in $($Cards.TrackITID)) {throw "There is already a card for this Track IT"}
+            $CardThatAlreadyExistsForWorkOrderBeingImported = $Cards | 
+            where TrackITID -EQ $WorkOrderToImport.Wo_Num
 
-            $DestinationBoardID = $TypeToTriageBoardIDMapping | 
-            where WorkOrderType -EQ $WorkOrderToImport.Type |
-            select -ExpandProperty TriageBoardID
+            if($CardThatAlreadyExistsForWorkOrderBeingImported) {
+                Invoke-TrackITLogin -Username helpdeskbot -Pwd helpdeskbot
+                $Response = Edit-TervisTrackITWorkOrder -WorkOrderNumber $WorkOrder.Wo_Num -KanbanizeCardID $CardThatAlreadyExistsForWorkOrderBeingImported.taskid | Out-Null
+                
+                if (($Response.success | ConvertTo-Boolean) -eq $false) {
+                    throw "There is already a card for this Track IT"
+                }
+            } else {          
+                $DestinationBoardID = $TypeToTriageBoardIDMapping | 
+                where WorkOrderType -EQ $WorkOrderToImport.Type |
+                select -ExpandProperty TriageBoardID
 
-            New-KanbanizeCardFromTrackITWorkOrder -WorkOrder $WorkOrderToImport -DestinationBoardID $DestinationBoardID -DestinationColumn $TriageProcessStartingColumn
+                New-KanbanizeCardFromTrackITWorkOrder -WorkOrder $WorkOrderToImport -DestinationBoardID $DestinationBoardID -DestinationColumn $TriageProcessStartingColumn
+            }
         } catch {            
             $ErrorMessage = "Error running Import-UnassignedTrackItsToKanbanize: " + $WorkOrderToImport.Wo_Num + " -  " + $WorkOrderToImport.Task
             Send-MailMessage -From HelpDeskBot@tervis.com -to HelpDeskDispatch@tervis.com -subject $ErrorMessage -SmtpServer cudaspam.tervis.com -Body $_.Exception|format-list -force
@@ -237,7 +259,7 @@ function Import-TrackItsToKanbanize {
 }
 
 
-Function Close-WorkOrdersForEmployeesWhoDontWorkAtTervis {
+function Close-WorkOrdersForEmployeesWhoDontWorkAtTervis {
     $WorkOrders = Get-TervisTrackITUnOfficialWorkOrder
     $ADUser = get-aduser -Filter *
     $WorkOrdersWithoutRequestorInAD = $WorkOrders | where REQUEST_EMAIL -NotIn $ADUser.UserPrincipalName
