@@ -236,11 +236,11 @@ function Import-TrackItsToKanbanize {
     $TypeToTriageBoardIDMapping = [PSCustomObject][Ordered]@{
         WorkOrderType = "Technical Services" 
         TriageBoardID = 29
-    },
+    }<#,
     [PSCustomObject][Ordered]@{
         WorkOrderType = "Business Services"
         TriageBoardID = 71
-    }
+    }#>
 
     $WorkOrdersToImport = $WorkOrders | 
     where Type -In $TypeToTriageBoardIDMapping.WorkOrderType | 
