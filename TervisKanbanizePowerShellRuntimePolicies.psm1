@@ -254,7 +254,7 @@ function Import-TrackItsToKanbanize {
 
             if($CardThatAlreadyExistsForWorkOrderBeingImported) {
                 Invoke-TrackITLogin -Username helpdeskbot -Pwd helpdeskbot
-                $Response = Edit-TervisTrackITWorkOrder -WorkOrderNumber $WorkOrder.Wo_Num -KanbanizeCardID $CardThatAlreadyExistsForWorkOrderBeingImported.taskid | Out-Null
+                $Response = Edit-TervisTrackITWorkOrder -WorkOrderNumber $WorkOrderToImport.Wo_Num -KanbanizeCardID $CardThatAlreadyExistsForWorkOrderBeingImported.taskid | Out-Null
                 
                 if (($Response.success | ConvertTo-Boolean) -eq $false) {
                     throw "There is already a card for this Track IT"
