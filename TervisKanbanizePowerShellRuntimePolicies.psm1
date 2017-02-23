@@ -65,6 +65,7 @@ function Invoke-TervisKanbanizePowerShellRuntimePolicies {
 
     Import-TrackItsToKanbanize -Cards $Cards -WorkOrders $WorkOrders
     Move-CompletedCardsThatHaveAllInformationToArchive -Cards $Cards -WorkOrders $WorkOrders
+    Move-CardsFromArchiveToWaitingToBeWorkedOn -Cards $Cards
     Move-CardsInWaitingForScheduledDateThatDontHaveScheduledDateSet -Cards $Cards
     Move-CardsInWaitingForScheduledDateThatHaveReachedTheirDate -Cards $Cards
     Move-CardsInWaitingForScheduledDateThatHaveCommentAfterMovement -Cards $Cards
@@ -152,13 +153,26 @@ function Move-CompletedCardsThatHaveAllInformationToArchive {
     )
     
     $CardsThatCanBeArchived = $Cards | 
-    where columnpath -In "Done","Archive" |
+    where columnpath -In "Done" |
     where type -ne "None" |
     where assignee -NE "None" |
     where TrackITID -NotIn $($OpenTrackITWorkOrders.woid)
 
     foreach ($Card in $CardsThatCanBeArchived) {
         Move-KanbanizeTaskToArchive -CardID $Card.TaskID
+    }
+}
+
+function Move-CardsFromArchiveToWaitingToBeWorkedOn {
+    param (
+        $Cards
+    )
+    
+    $CardsFromArchiveToWaitingToBeWorkedOn = $Cards | 
+    where columnpath -In "Archive"
+
+    foreach ($Card in $CardsFromArchiveToWaitingToBeWorkedOn) {
+        Move-KanbanizeTask -BoardID $Card.BoardID -TaskID $Card.TaskID -Column "In Progress.Waiting to be worked on"
     }
 }
 
