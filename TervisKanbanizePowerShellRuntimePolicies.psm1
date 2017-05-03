@@ -1,6 +1,7 @@
 ﻿function Install-TervisKanbanizePowerShellRuntimePolicies {
     param (
-        $PathToScriptForScheduledTask = $PSScriptRoot
+        $PathToScriptForScheduledTask = $PSScriptRoot,
+        [Parameter(Mandatory)]$ComputerName
     )
     Install-PasswordStatePowerShell
 
@@ -8,18 +9,21 @@
 
     Install-PowerShellApplicationScheduledTask -PathToScriptForScheduledTask $PathToScriptForScheduledTask `
         -Credential $ScheduledTasksCredential `
-        -ScheduledTaskFunctionName "Invoke-TervisKanbanizePowerShellRuntimePolicies" `
-        -RepetitionInterval EverWorkdayDuringTheDayEvery15Minutes
+        -FunctionName "Invoke-TervisKanbanizePowerShellRuntimePolicies" `
+        -RepetitionInterval EverWorkdayDuringTheDayEvery15Minutes `
+        -ComputerName $ComputerName
 
     Install-PowerShellApplicationScheduledTask -PathToScriptForScheduledTask $PathToScriptForScheduledTask `
         -Credential $ScheduledTasksCredential `
-        -ScheduledTaskFunctionName "New-EachMondayRecurringCards" `
-        -RepetitionInterval OnceAWeekMondayMorning
+        -FunctionName "New-EachMondayRecurringCards" `
+        -RepetitionInterval OnceAWeekMondayMorning `
+        -ComputerName $ComputerName
 
     Install-PowerShellApplicationScheduledTask -PathToScriptForScheduledTask $PathToScriptForScheduledTask `
         -Credential $ScheduledTasksCredential `
-        -ScheduledTaskFunctionName "New-EachWorkDayRecurringCards" `
-        -RepetitionInterval EverWorkdayOnceAtTheStartOfTheDay
+        -FunctionName "New-EachWorkDayRecurringCards" `
+        -RepetitionInterval EverWorkdayOnceAtTheStartOfTheDay `
+        -ComputerName $ComputerName
 
     $KanbanizeCredential = Get-PasswordstateCredential -PasswordID 2998
 
@@ -52,11 +56,12 @@ function New-EachMondayRecurringCards {
 
 function Uninstall-TervisKanbnaizePowerShellRuntimePolicies {
     param (
-        $PathToScriptForScheduledTask = $PSScriptRoot
+        $PathToScriptForScheduledTask = $PSScriptRoot,
+        [Parameter(Mandatory)]$ComputerName
     )
-    Uninstall-PowerShellApplicationScheduledTask -PathToScriptForScheduledTask $PathToScriptForScheduledTask -ScheduledTaskFunctionName "Invoke-TervisKanbanizePowerShellRuntimePolicies"
-    Uninstall-PowerShellApplicationScheduledTask -PathToScriptForScheduledTask $PathToScriptForScheduledTask -ScheduledTaskFunctionName "New-EachMondayRecurringCards"
-    Uninstall-PowerShellApplicationScheduledTask -PathToScriptForScheduledTask $PathToScriptForScheduledTask -ScheduledTaskFunctionName "New-EachWorkDayRecurringCards"
+    Uninstall-PowerShellApplicationScheduledTask -PathToScriptForScheduledTask $PathToScriptForScheduledTask -ComputerName $ComputerName -FunctionName "Invoke-TervisKanbanizePowerShellRuntimePolicies"
+    Uninstall-PowerShellApplicationScheduledTask -PathToScriptForScheduledTask $PathToScriptForScheduledTask -ComputerName $ComputerName -FunctionName "New-EachMondayRecurringCards"
+    Uninstall-PowerShellApplicationScheduledTask -PathToScriptForScheduledTask $PathToScriptForScheduledTask -ComputerName $ComputerName -FunctionName "New-EachWorkDayRecurringCards"
 }
 
 function Invoke-TervisKanbanizePowerShellRuntimePolicies {
