@@ -161,7 +161,7 @@ function Move-CompletedCardsThatHaveAllInformationToArchive {
     where columnpath -In "Done" |
     where type -ne "None" |
     where assignee -NE "None" |
-    where TrackITID -NotIn $($OpenTrackITWorkOrders.woid)
+    where TrackITID -NotIn $($WorkOrders.woid)
 
     foreach ($Card in $CardsThatCanBeArchived) {
         Move-KanbanizeTaskToArchive -CardID $Card.TaskID
