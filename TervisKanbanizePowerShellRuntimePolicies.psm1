@@ -3,7 +3,6 @@
         $PathToScriptForScheduledTask = $PSScriptRoot,
         [Parameter(Mandatory)]$ComputerName
     )
-    Install-PasswordStatePowerShell
 
     $ScheduledTasksCredential = Get-PasswordstateCredential -PasswordID 259
 
