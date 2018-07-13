@@ -4,7 +4,7 @@
         [Parameter(Mandatory)]$ComputerName
     )
 
-    $ScheduledTasksCredential = Get-PasswordstateCredential -PasswordID 259
+    $ScheduledTasksCredential = Get-PasswordstatePassword -AsCredential -ID 259
 
     Install-PowerShellApplicationScheduledTask -PathToScriptForScheduledTask $PathToScriptForScheduledTask `
         -Credential $ScheduledTasksCredential `
@@ -24,7 +24,7 @@
         -RepetitionInterval EverWorkdayOnceAtTheStartOfTheDay `
         -ComputerName $ComputerName
 
-    $KanbanizeCredential = Get-PasswordstateCredential -PasswordID 2998
+    $KanbanizeCredential = Get-PasswordstatePassword -AsCredential -ID 2998
 
     Install-TervisKanbanize -Email $KanbanizeCredential.UserName -Pass $KanbanizeCredential.GetNetworkCredential().password
 }
