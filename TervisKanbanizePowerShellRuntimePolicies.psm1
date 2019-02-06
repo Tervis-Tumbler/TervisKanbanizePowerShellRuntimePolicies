@@ -34,14 +34,14 @@ function New-EachWorkDayRecurringCards {
     if ( -not ($Cards | where BoardID -eq 29 | where Title -eq "Gather Kanban cards" )) {
         New-KanbanizeTask -BoardID 29 -Title "Gather Kanban cards" -Type "Kanban cards gather" -Column Requested
     } else {
-        Send-MailMessage -From HelpDeskBot@tervis.com -to HelpDeskDispatch@tervis.com -subject "The previous Gather Kanban cards card has not been completed yet" -SmtpServer cudaspam.tervis.com -Body "The previous Gather Kanban cards card has not been completed yet"
+        Send-TervisMailMessage -From HelpDeskBot@tervis.com -to HelpDeskDispatch@tervis.com -subject "The previous Gather Kanban cards card has not been completed yet" -Body "The previous Gather Kanban cards card has not been completed yet"
     }
 
 
     if ( -not ($Cards | where BoardID -eq 29 | where Title -eq "Review requested kanban cards" )) {
         New-KanbanizeTask -BoardID 29 -Title "Review requested kanban cards" -Type "Kanban cards requested review" -Column Requested
     } else {
-        Send-MailMessage -From HelpDeskBot@tervis.com -to HelpDeskDispatch@tervis.com -subject "The previous Review requested kanban cards card has not been completed yet" -SmtpServer cudaspam.tervis.com -Body "The previous Review requested kanban cards card has not been completed yet"
+        Send-TervisMailMessage -From HelpDeskBot@tervis.com -to HelpDeskDispatch@tervis.com -subject "The previous Review requested kanban cards card has not been completed yet" -Body "The previous Review requested kanban cards card has not been completed yet"
     }
 }
 
@@ -49,7 +49,7 @@ function New-EachMondayRecurringCards {
     if ( -not ($Cards | where BoardID -eq 29 | where Title -eq "Review requested kanban cards" )) {
         New-KanbanizeTask -BoardID 29 -Title "Review ordered kanban cards" -Type "Kanban cards ordered review" -Column Requested
     } else {
-        Send-MailMessage -From HelpDeskBot@tervis.com -to HelpDeskDispatch@tervis.com -subject "The previous Review ordered kanban cards card has not been completed yet" -SmtpServer cudaspam.tervis.com -Body "The previous Review ordered kanban cards card has not been completed yet"
+        Send-TervisMailMessage -From HelpDeskBot@tervis.com -to HelpDeskDispatch@tervis.com -subject "The previous Review ordered kanban cards card has not been completed yet" -Body "The previous Review ordered kanban cards card has not been completed yet"
     }
 }
 
@@ -286,7 +286,7 @@ function Import-TrackItsToKanbanize {
             }
         } catch {            
             $ErrorMessage = "Error running Import-UnassignedTrackItsToKanbanize: " + $WorkOrderToImport.Wo_Num + " -  " + $WorkOrderToImport.Task
-            Send-MailMessage -From HelpDeskBot@tervis.com -to HelpDeskDispatch@tervis.com -subject $ErrorMessage -SmtpServer cudaspam.tervis.com -Body $_.Exception|format-list -force
+            Send-TervisMailMessage -From HelpDeskBot@tervis.com -to HelpDeskDispatch@tervis.com -subject $ErrorMessage -Body $_.Exception|format-list -force
         }
     }
 }
